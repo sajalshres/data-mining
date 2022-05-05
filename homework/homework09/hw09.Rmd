@@ -1,0 +1,57 @@
+```{r}
+cleanDocWords = function(fileName) {
+  # read docword file
+  docWordDf = read.table("docword.kos.txt")
+  colnames(docWordDf) = c("document", "word", "occurrence")
+  
+  # read vocab file
+  vocabDf = read.table("vocab.kos.txt")
+  
+  # remove file if exists
+  opWordsFile = "words.kos.txt"
+  if(file.exists(opWordsFile)) {
+    file.remove(opWordsFile)
+  }
+  
+  for (document in sort(unique(docWordDf$document))) {
+    # get all words in column "word" by document number
+    wordsById = docWordDf[docWordDf$document == document, "word"]
+    words = c()
+    
+    for (i in wordsById) {
+      words = c(words, vocabDf[i, ])
+    }
+    
+    # write to file
+    cat(words, file=opWordsFile, append=TRUE, sep="\t")
+    cat("\n", file=opWordsFile, append=TRUE)
+  }
+  
+  return(opWordsFile)
+}
+
+wordsFileName = cleanDocWords(fileName = "docword.kos.txt")
+t = read.transactions(wordsFileName)
+ruls = apriori(t, parameter = list(support=.2, confidence=.6, minlen=2))
+inspect(ruls)
+```
+
+```{r}
+t = read.transactions("words.kos.txt")
+ruls = apriori(t, parameter = list(support=.2, confidence=.6, minlen=2))
+```
+
+```{r}
+inspect(ruls)
+```
+
+```{r}
+vocabDf = read.table("vocab.kos.txt")
+colnames(vocabDf) = c("vocab")
+
+wordsById = c(1,2,3,4)
+
+replace(wordsById, wordsById==1, vocabDf[1,])
+
+wordsById
+```

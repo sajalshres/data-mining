@@ -1,0 +1,520 @@
+1. Preprocess the data
+
+```{r}
+# Load library
+library(e1071)
+library(mice)
+library(arules)
+library(rpart)
+library(rpart.plot)
+library(neuralnet)
+library(dplyr)
+library(class)
+library(factoextra)
+library(NbClust)
+library(caret)
+```
+
+1.a) join the data sources using the unique key
+
+```{r}
+load_and_merge_data = function(file_name_a, file_name_b) {
+  # load data
+  a_df <- read.table(file_name_a, header = TRUE)
+  b_df <- read.table(file_name_b, header = TRUE)
+  
+  # merge
+  df <- merge(a_df, b_df, by = "id", all = TRUE)
+  
+  # Sort the data by id
+  df <- df[order(df$id), ]
+  
+  # move atRisk column to end
+  df <-  df %>% relocate(atRisk, .after = diarrhea)
+  
+  return(df)
+}
+
+train_df <- load_and_merge_data(file_name_a = "data8_A_train.txt", file_name_b = "data8_B_train.txt")
+test_df <- load_and_merge_data(file_name_a = "data8_A_test.txt", file_name_b = "data8_B_test.txt")
+
+cat("Dataset Summary:\n")
+print(summary(train_df))
+
+```
+
+1.b) locate and fix missing data (you can choose to delete the row, the column or estimate the value of the missing data)
+```{r}
+# plot the missing data
+print(md.pattern(train_df))
+```
+
+```{r}
+# Discard the rows that have for than 4 missing columns
+
+ind <- rowSums(is.na(train_df)) > 2
+missing_train_df <- train_df[ind,]
+
+train_df <- train_df[!ind,]
+print(train_df[!complete.cases(train_df),])
+
+# estimate values for temp, bpSys, vo2 and throat using mean
+for (i in 2:7) {
+  train_df[, i][is.na(train_df[, i])] <- mean(train_df[, i], na.rm = TRUE)
+}
+print(train_df[!complete.cases(train_df),])
+```
+
+```{r}
+count(train_df)
+```
+```{r}
+missing_train_df = train_df[!complete.cases(train_df), ]
+#train_df = train_df[complete.cases(train_df), ]
+
+missing_train_df
+```
+
+1.c) locate and fix noise (same choices as for missing data)
+
+A student emailed me the following questions:
+You state "count the outliers for each attribute".  What method should we use to determine if a value is an outlier?  I can't remember talking about a specific anomaly package in R when we covered Anomaly Analysis.  
+
+Is it acceptable for us to use the 1.5*IQR formula or are you looking for something different?
+I am suggesting that you consider any values (that are not noise) and are more than 3 standard deviations from the mean to be outliers.
+
+You state "Calculate the bin ranges for discretization of the attribute throat".  In the hand-in file it appears you want three bins.  Should the bins be based on equal width (e.g. bin ranges are all exactly 11 points) or equal frequency (e.g. bin ranges each hold approximately the same number of records)?
+
+You should choose the ranges so that the number of instances in each range are approximately the same (as close as possible).
+
+```{r}
+# Only values less than 0 seems as noise
+train_df[train_df < 0] = NA
+
+noise_df = train_df[!complete.cases(train_df), ]
+
+# only temp, bpSys, vo2 has noise in 3 rows
+# estimate values for temp, bpSys, vo2 using mean
+for (i in 2:4) {
+  train_df[, i][is.na(train_df[, i])] <- mean(train_df[, i], na.rm = TRUE)
+}
+
+#train_df = train_df[complete.cases(train_df), ]
+  
+```
+
+```{r}
+# remove id as it is not required during training
+train_df <- subset(train_df, select=-id)
+```
+
+1.d) count the outliers for each attribute (do not change their values)
+
+```{r}
+# Search for outliers
+# consider any values (that are not noise) and are more than 3 standard deviations from the mean to be outliers.
+search_outliers <- function(ds, colname) {
+  cat(paste("Searching outlier for", colname, "\n"))
+  
+  data <- ds[, colname]
+  
+  mean_data <- mean(data)
+  sd_data <- sd(data)
+  outlier_limit <- 3 * sd_data + mean_data
+  
+  print(paste("mean:", mean_data, "sd:", sd_data, "outlier_limit:", outlier_limit))
+  
+  ind <- ds[colname] > outlier_limit
+  print(ds[ind, colname])
+  print(length(ds[ind, colname]))
+}
+
+for (colname in colnames(train_df)) {
+  search_outliers(train_df, colname)
+}
+```
+
+1.e) calculate the bin ranges for discretization of the attribute throat (will not be used later)
+
+```{r}
+throat_df <- data.frame(train_df)
+#throat_df$bins <-  discretize(train_df$throat, breaks = 3, labels = c("low", "medium", "high") )
+
+#(throat_df[throat_df$bins == "high", "throat"])
+
+table(discretize(train_df$throat, breaks = 3, labels = c("low", "medium", "high") ))
+table(cut(throat_df$throat, breaks = c(80, 101, 104, 120)))
+
+
+
+#table(throat_cat)
+#throat_df <- data.frame(train_df)
+#throat_cat <- cut(seq_along(sort(train_df$throat)), 3, labels = FALSE)
+#throat_df$bins = throat_cat
+
+#min(throat_df[throat_df$bins == 3, "throat"])
+```
+
+2. cluster the data to learn more about it.
+2.a) normalize data using minMax
+
+temp, bpSys, vo2 and throat as numeric, always
+atRisk (the class) should always be a factor
+use all attributes (except id) for rpart and naiveBayes and make headA, bodyA, cough, runny, nausea and diarrhea as factors
+for ANN, KNN, SVM and Kmeans use only temp, bpSys, vo2, throat, headA and bodyA.  Normalize them all and make them all numeric
+
+```{r}
+get_normalized_data <- function(data) {
+  norm_value <- (data - min(data)) / (max(data) - min(data))
+  return(norm_value)
+}
+
+
+normalized_df <- as.data.frame(lapply(train_df[1:6], get_normalized_data))
+
+head(normalized_df)
+```
+```{r}
+
+plot(normalized_df)
+
+```
+
+```{r}
+library(ggplot2)
+library(plotly)
+ggplot(train_df, aes(x=temp, y=headA)) + geom_point()
+```
+
+```{r}
+plot(train_df)
+```
+
+2.b) use kmeans to find clusters
+
+```{r}
+set.seed(123)
+
+km = kmeans(normalized_df, 5)
+
+print(km$size)
+```
+
+2.c) display the centroids using the original scale (not minMax averages)
+
+```{r}
+print(km$centers)
+```
+
+2.d) describe clusters in a meaningful way
+
+```{r}
+km$cluster
+
+```
+
+```{r}
+centorids_df <- data.frame(matrix(ncol = length(colnames(normalized_df)), nrow = 0))
+colnames(centorids_df) <- colnames(normalized_df)
+
+for (i in 1:5) {
+  cluster <- train_df[km$cluster==i, ]
+  centorids_df[nrow(centorids_df) + 1,] <- lapply(cluster[1:6], mean)
+}
+
+centorids_df
+```
+
+2.e) find the optimum number of clusters using the “knee” method of plotting SSE
+
+```{r}
+
+km_df <- data.frame(normalized_df, cluster =  as.factor(km$cluster))
+
+BSS <- km$betweenss
+
+TSS <- km$totss
+
+BSS / TSS * 100
+
+fviz_nbclust(km_df, kmeans, method = "wss") +
+  geom_vline(xintercept = 4, linetype = 2) + # add line for better visualisation
+  labs(subtitle = "Knee method") # add subtitle
+
+
+
+```
+```{r}
+set.seed(123)
+library(purrr)
+
+# function to calculate within sum of squares
+calculate_wss <- function(k) {
+  kmeans(normalized_df, k, nstart = 10 )$tot.withinss
+}
+
+# clusters from 1 to 15
+k <- 1:15
+
+# apply calculate_wss function for k cluster and get vector
+wss_values <- map_dbl(k, calculate_wss)
+
+plot(k, wss_values,
+       type="b", pch = 15, frame = FALSE,
+       xlab="Number of clusters K",
+       ylab="Total within sum of squares")
+
+```
+
+3. run tests to compare classifiers and make a choice based on performance
+3.a) use decision tree (rpart), naive Bayes, K nearest neighbor, SV
+
+```{r}
+# use decision tree (rpart)
+# use all attributes (except id) for rpart and naiveBayes and make headA, bodyA, cough, runny, nausea and diarrhea as factors
+set.seed(123)
+# combine normalized data and factor of
+dt_df <- cbind(train_df[1:4], as.data.frame(lapply(train_df[5:11], as.factor)))
+
+# build model
+dt_mod  <- rpart(atRisk ~ ., dt_df, method = "class")
+
+
+print(rpart.plot(dt_mod))
+print(dt_mod)
+```
+
+```{r}
+# perform prediction from decision tree
+dt_test_df <- cbind(test_df[1:5], as.data.frame(lapply(test_df[6:12], as.factor)))
+
+dt_pred = predict(dt_mod, dt_test_df, type = "class")
+
+dt_c_matrix <- table(dt_pred, dt_test_df[, 12])
+names(dimnames(dt_c_matrix)) <- c("predicted", "actual")
+dt_c_matrix
+```
+
+```{r}
+plot(varImp(svm_model))
+
+
+```
+
+```{r}
+get_results <- function(c) {
+  TP <- c[1, 1]
+  FP <- c[1, 2]
+  FN <- c[2, 1]
+  TN <- c[2, 2]
+  
+  acc <- (TP + TN) / (TP + FP + FN + TN) * 100
+  pre <- (TP) / (TP + FP) * 100
+  rec <- (TP) / (TP + FN) * 100
+  
+  print(paste("Accuracy:", acc, "Precision:",  pre, "Recall:",  rec))
+  
+}
+
+get_results(dt_c_matrix)
+
+```
+
+```{r}
+# naive Bayes
+# for ANN, KNN, SVM and Kmeans use only temp, bpSys, vo2, throat, headA and bodyA.  Normalize them all and make them all numeric
+naive_bayes_df <- cbind(train_df[1:4], as.data.frame(lapply(train_df[5:11], as.factor)))
+naive_bayes_test_df = cbind(test_df[1:5], as.data.frame(lapply(test_df[6:12], as.factor)))
+
+naive_bayes_model = naiveBayes(atRisk ~ ., naive_bayes_df)
+print(naive_bayes_model)
+```
+
+```{r}
+# Predictions for naive bayes
+naive_bayes_pred = predict(naive_bayes_model, naive_bayes_test_df)
+
+naive_bayes_c_matrix <- table(naive_bayes_pred, naive_bayes_test_df[, 12])
+names(dimnames(naive_bayes_c_matrix)) <- c("predicted", "actual")
+naive_bayes_c_matrix
+get_results(naive_bayes_c_matrix)
+```
+
+
+```{r}
+# KNN
+# for KNN use only temp, bpSys, vo2, throat, headA and bodyA.  Normalize them all and make them all numeric
+set.seed(123)
+
+knn_df = data.frame(normalized_df)
+knn_test_df <- as.data.frame(lapply(test_df[2:7], get_normalized_data))
+
+# run knn
+knn_pred <- knn(knn_df, knn_test_df, cl = train_df$atRisk, k = 78, prob=TRUE)
+
+# create confusion matrix
+knn_c_matrix <- table(knn_pred, test_df$atRisk)
+
+# print the results
+get_results(knn_c_matrix)
+```
+
+```{r}
+# SVM
+# for SVM use only temp, bpSys, vo2, throat, headA and bodyA.  Normalize them all and make them all numeric
+set.seed(123)
+
+svm_df = data.frame(train_df[1:6])
+svm_df$atRisk = as.factor(train_df$atRisk)
+svm_model <- svm(atRisk~., data = svm_df)
+
+# use train from caret
+# svm_model <-  train(
+#   atRisk ~., data = train_df, method = "svmLinear",
+#   trControl = trainControl("cv", number = 10),
+#   preProcess = c("center","scale")
+# )
+
+print(svm_model)
+```
+
+```{r}
+# SVM
+set.seed(123)
+svm_test_df <- as.data.frame(lapply(test_df[2:7], get_normalized_data))
+svm_test_df$atRisk = test_df$atRisk
+svm_pred = predict(svm_model, test_df)
+confusionMatrix(svm_pred, as.factor(svm_test_df$atRisk))
+
+svm_c_matrix <- table(svm_pred, svm_test_df[,7])
+
+get_results(svm_c_matrix)
+```
+
+```{r}
+# ANN
+# for ANN,  use only temp, bpSys, vo2, throat, headA and bodyA.  Normalize them all and make them all numeric
+set.seed(123)
+ann_df <- data.frame(normalized_df)
+ann_df$atRisk = train_df$atRisk
+nn_model <- neuralnet(atRisk~bpSys+vo2+throat+headA+bodyA+temp, data = ann_df, hidden = 5)
+plot(nn_model)
+```
+
+```{r}
+set.seed(123)
+ann_test_df <- as.data.frame(lapply(test_df[2:7], get_normalized_data))
+ann_test_df$atRisk = (test_df$atRisk)
+
+ann_pred <- neuralnet::compute(nn_model, ann_test_df)
+
+ind = ann_pred$net.result < 0.5
+ann_pred$net.result[ind] <- 0
+ann_pred$net.result[!ind] <- 1
+
+confusionMatrix(as.factor(c(ann_pred$net.result)), as.factor(ann_test_df$atRisk))
+
+ann_c_matrix <- table(as.factor(c(ann_pred$net.result)), as.factor(ann_test_df$atRisk))
+
+get_results(ann_c_matrix)
+
+```
+
+
+```{r}
+plot(knn)
+```
+
+
+3.b) choose the best model (algorithm) and defend your choice using statistics, clustering results, scatter plots, boxplots and/or histograms.
+
+```{r}
+```
+
+4. write an R script that can be run weekly to
+4.a) clean and merge the data sources (two files for training and two for test)
+4.b) build classification model with the training data
+4.c) predict atRisk for employees using the test data and write predictions to a text file
+
+```{r}
+```
+
+5. write a one paragraph (200 words maximum)
+5.a) describe the nature of the data
+5.b) describe the weekly prediction (including the quality of the prediction using precision, recall and accuracy)
+
+```{r}
+
+mean(svm_pred == test_df$atRisk)
+```
+
+
+```{r}
+mod_df = data.frame(normalized_df)
+mod_df$atRisk = as.factor(train_df$atRisk)
+
+mod_test_df <- as.data.frame(lapply(test_df[2:7], get_normalized_data))
+mod_test_df$atRisk = test_df$atRisk
+
+
+result_matrix <- c()
+
+get_accuracy <- function(t) {
+  TP <- t[1, 1]
+  FP <- t[1, 2]
+  FN <- t[2, 1]
+  TN <- t[2, 2]
+  
+  acc <- (TP + TN) / (TP + FP + FN + TN) * 100
+  return(acc)
+}
+
+
+for (i in 1:200) {
+  set.seed(i)
+
+  
+  
+  # svm
+  t_svm_model <- svm(atRisk~., data = mod_df, kernel = "linear", cost = 10, scale = FALSE)
+  t_svm_pred = predict(t_svm_model, mod_test_df, type="vector")
+  svm_c_matrix <- table(t_svm_pred, mod_test_df[,7])
+
+  print(mean(t_svm_pred == mod_test_df$atRisk))
+}
+
+
+
+```
+
+```{r}
+
+set.seed(123)
+library(class)
+
+build_knn <- function(df, test_df, class) {
+  knn_df = data.frame(df)
+  knn_test_df <- as.data.frame(lapply(test_df[2:7], get_normalized_data))
+
+  # run knn
+  knn_pred <- knn(knn_df, knn_test_df, cl = class, k = 78, prob=TRUE)
+  
+  
+  # create confusion matrix
+  knn_c_matrix <- table(knn_pred, test_df$atRisk)
+  
+  # print the results
+  knn_results <- get_results(knn_c_matrix)
+  
+  return(knn_pred)
+}
+
+print("KNN  **********************")
+
+df_cluster_1 <- normalized_df[km$cluster ==2,]
+build_knn(df_cluster_1, test_df, train_df$atRisk)
+
+```
+
+
+

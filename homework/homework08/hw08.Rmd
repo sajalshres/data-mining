@@ -1,0 +1,176 @@
+Howmework 08
+
+```{r}
+ds = read.table("hw08data1.txt", header=TRUE)
+newDs = data.frame(matrix(ncol=3, nrow = 0))
+colnames(newDs) = c("id", "x1", "x2")
+
+for(i in 1:nrow(ds)) {
+  x1 = ds[i, "x1"]
+  x2 = ds[i, "x2"]
+  
+  v2x1 = (x1 - min(ds["x1"])) / (max(ds["x1"]) - min(ds["x1"]) )
+  v2x2 = (x2 - min(ds["x2"])) / (max(ds["x2"]) - min(ds["x2"]) )
+  print(paste(v2x1, v2x2))
+  
+  newDs[nrow(newDs) +1, ] = c(ds[i, "id"], v2x1, v2x2)
+}
+
+newDs
+```
+
+
+```{r}
+dst1 = sqrt((168 - 185) ^ 2 + (60 - 72) ^ 2)
+
+dst2 = sqrt((168 - 170) ^ 2 + (60 - 56) ^ 2)
+
+print(paste(dst1, dst2))
+```
+
+
+```{r}
+print((7+10+12)/3)
+
+print((251 + 178 + 195) /3)
+
+
+print((9 + 5 + 15)/3)
+
+print((342 + 218 + 278)/3)
+
+```
+
+
+```{r}
+
+print("Distatnce from Cluster 1")
+distCls1 = c()
+for(i in 1:nrow(ds)) {
+  x1 = ds[i, "x1"]
+  x2 = ds[i, "x2"]
+  distCls1 = c(distCls1, sqrt((x1 - 9.6) ^ 2 + (x2 - 208) ^ 2))
+}
+
+print(distCls1)
+
+print("Distatnce from Cluster 2")
+distCls2 = c()
+for(i in 1:nrow(ds)) {
+  x1 = ds[i, "x1"]
+  x2 = ds[i, "x2"]
+  distCls2 = c(distCls2, sqrt((x1 - 9.6) ^ 2 + (x2 - 279.6) ^ 2))
+}
+
+print(distCls2)
+```
+
+
+
+
+```{r}
+ds2 = data.frame(
+  id = ds["id"],
+  x1 = distCls1,
+  x2 = distCls2
+)
+ds2
+
+
+print("Distatnce from Cluster 1")
+dist2Cls1 = c()
+for(i in 1:nrow(ds2)) {
+  x1 = ds2[i, "x1"]
+  x2 = ds2[i, "x2"]
+  dist2Cls1 = c(dist2Cls1, sqrt((x1 - 18.076) ^ 2 + (x2 - 82.668) ^ 2))
+}
+
+print(dist2Cls1)
+
+print("Distatnce from Cluster 2")
+dist2Cls2 = c()
+for(i in 1:nrow(ds2)) {
+  x1 = ds2[i, "x1"]
+  x2 = ds2[i, "x2"]
+  dist2Cls2 = c(dist2Cls2, sqrt((x1 - 82.761) ^ 2 + (x2 - 32.212) ^ 2))
+}
+
+print(distCls2)
+
+ds3 = data.frame(
+  id = ds2["id"],
+  x1 = dist2Cls1,
+  x2 = dist2Cls2
+)
+ds3
+```
+
+
+```{r}
+print((30.002 + 11.007 + 13.219)/3)
+```
+
+```{r}
+dMatrix = data.frame(matrix(ncol = 6, nrow = 0))
+
+for (i in 1:nrow(ds)) {
+  x1 = ds[i, "x1"]
+  x2 = ds[i, "x2"]
+  
+  dst =c()
+  for(i in 1:nrow(ds)) {
+    a1 = ds[i, "x1"]
+    a2 = ds[i, "x2"]
+    dst = c(dst, sqrt((x1 - a1) ^ 2 + (x2 - a2) ^ 2))
+  }
+  print(dst)
+  dMatrix[nrow(dMatrix) + 1,] = dst
+}
+
+dMatrix
+```
+
+
+```{r}
+set.seed(1)
+
+x = read.table("hw08data.txt", header = TRUE)
+
+km = kmeans(x, 5)
+
+km$size
+
+```
+
+
+```{r}
+km$centers
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

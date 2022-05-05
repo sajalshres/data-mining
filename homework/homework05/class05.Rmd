@@ -1,0 +1,19 @@
+```{r}
+x=read.table("", header=TRUE)
+y=read.table("", headeer=TRUE)
+
+library(e1071)
+
+x[,6] = as.factor(x[,6])
+y[,6] = as.factor(x[,6])
+
+mod = svm(x[,2:5], x[,6])
+
+pred = predict(mod, y[,2:5])
+pred[1:10]
+
+t = table(pred, y[,6])
+
+re = t[1,1]/sum(t[,1])
+```
+

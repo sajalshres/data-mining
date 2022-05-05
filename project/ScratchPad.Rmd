@@ -1,0 +1,226 @@
+Scratpad
+
+```{r}
+normalized_df2 = data.frame(matrix(ncol = length(colnames(train_df)), nrow = 0))
+
+for (i in 1:nrow(train_df)) {
+  temp = train_df[i, "temp"]
+  bpSys = train_df[i, "bpSys"]
+  vo2 = train_df[i, "vo2"]
+  throat = train_df[i, "throat"]
+  atRisk = train_df[i, "atRisk"]
+  headA = train_df[i, "headA"]
+  bodyA = train_df[i, "bodyA"]
+  cough = train_df[i, "cough"]
+  runny = train_df[i, "runny"]
+  nausea = train_df[i, "nausea"]
+  diarrhea = train_df[i, "diarrhea"]
+  
+  row <- c()
+  
+  for(col_name in colnames(train_df)) {
+    value <- train_df[i, col_name]
+    norm_value <- (value - min(train_df[col_name])) / (max(train_df[col_name]) - min(train_df[col_name]))
+    
+    row <- c(row, norm_value)
+  }
+  
+  #v2temp = (temp - min(train_df["temp"])) / (max(train_df["temp"]) - min(train_df["temp"]))
+  #v2bpSys = (bpSys - min(train_df["bpSys"])) / (max(train_df["bpSys"]) - min(train_df["bpSys"]))
+  #v2vo2 = (vo2 - min(train_df["vo2"])) / (max(train_df["vo2"]) - min(train_df["vo2"]))
+  #v2throat = (throat - min(train_df["throat"])) / (max(train_df["throat"]) - min(train_df["throat"]))
+  #v2atRisk = (atRisk - min(train_df["atRisk"])) / (max(train_df["atRisk"]) - min(train_df["atRisk"]))
+  #v2headA = (headA - min(train_df["headA"])) / (max(train_df["headA"]) - min(train_df["headA"]))
+  #v2bodyA = (bodyA - min(train_df["bodyA"])) / (max(train_df["bodyA"]) - min(train_df["bodyA"]))
+  #v2cough = (cough - min(train_df["cough"])) / (max(train_df["cough"]) - min(train_df["cough"]))
+  #v2runny = (runny - min(train_df["runny"])) / (max(train_df["runny"]) - min(train_df["runny"]))
+  #v2nausea = (nausea - min(train_df["nausea"])) / (max(train_df["nausea"]) - min(train_df["nausea"]))
+  #v2diarrhea = (diarrhea - min(train_df["diarrhea"])) / (max(train_df["diarrhea"]) - min(train_df["diarrhea"]))
+  
+  #normalized_df[nrow(normalized_df) + 1,] = c(
+   # v2temp,
+   # v2bpSys,
+   #  v2vo2,
+   # v2throat,
+  #  v2atRisk,
+   # v2headA,
+  #  v2bodyA,
+   # v2cough,
+  #  v2runny,
+  #  v2nausea,
+  #  v2diarrhea
+  #)
+  normalized_df2[nrow(normalized_df2) + 1, ] = row
+}
+```
+
+
+```{r}
+set.seed(10111)
+x = matrix(rnorm(40), 20, 2)
+y = rep(c(-1, 1), c(10, 10))
+x[y == 1,] = x[y == 1,] + 1
+dat = data.frame(x, y = as.factor(y))
+dat
+```
+```{r}
+#calculating the bin ranges
+bin_ranges <- function(n, col, df) {
+  my_vec <- c(df[, col])
+  my_vec <- sort(my_vec)
+  min <- min(my_vec)
+  max <- max(my_vec)
+  rnge <- (max - min) / n
+  print(n)
+  for (i in 1:n) {
+    print(paste("min:", min, "max:", max, "rnge:", rnge))
+    min <- floor(min + rnge)
+    
+    
+  }
+  vecs <- split(my_vec,             # Applying split() function
+                cut(seq_along(my_vec),
+                    n,
+                    labels = FALSE))
+  print(lengths(vecs))
+  return (vecs)
+  
+}
+
+rng<-bin_ranges(3,"throat",train_df)
+```
+
+```{r}
+norm_values = list(
+  temp = c(90, 106),
+  bpSys = c(90, 150),
+  vo2 = c(10, 70),
+  throat = c(80, 120),
+  atRisk = c(0, 1),
+  headA = c(0, 9),
+  bodyA = c(0, 9),
+  cough = c(0, 1),
+  runny = c(0, 1),
+  nausea = c(0, 1),
+  diarrhea = c(0, 1)
+)
+
+for(item in colnames(train_df)) {
+  if (item %in% names(norm_values)) {
+    ind = between(train_df[,item], norm_values[[item]][1], norm_values[[item]][2])
+    print(paste(item, train_df[!ind, item], length(train_df[!ind, item])))
+  }
+}
+```
+
+```{r}
+
+normalized_df = data.frame(matrix(ncol = length(colnames(train_df)), nrow = 0))
+colnames(normalized_df) = colnames(train_df)
+
+for (i in 1:nrow(train_df)) {
+  row <- c()
+  
+  for (col_name in colnames(train_df)) {
+    value <- train_df[i, col_name]
+    norm_value <-
+      (value - min(train_df[col_name])) / (max(train_df[col_name]) - min(train_df[col_name]))
+    
+    row <- c(row, norm_value)
+  }
+  
+  normalized_df[nrow(normalized_df) + 1,] = row
+}
+
+head(normalized_df)
+```
+
+
+```{r}
+dat <- matrix(data=runif(n=4, min=0, max=1), nrow=2, ncol=2, 
+              dimnames=list(c("pos", "neg"), c("pos", "neg")))
+
+# now set the names *of the dimensions* (not the row/colnames)
+#names(dimnames(dat)) <- c("predicted", "observed")
+
+dat
+```
+
+```{r}
+# naive Bayes
+
+naive_bayes_df = data.frame(train_df)
+naive_bayes_test_df = data.frame(test_df)
+
+naive_bayes_df <- cbind(train_df[1:4], as.data.frame(lapply(train_df[5:11], as.factor)))
+
+for(column in c("atRisk", "headA", "bodyA", "cough", "runny", "nausea", "diarrhea")) {
+ 
+  naive_bayes_df[,column] = as.factor(naive_bayes_df[,column])
+  naive_bayes_test_df[,column] = as.factor(naive_bayes_test_df[,column])
+}
+
+naive_bayes_model = naiveBayes(atRisk~., naive_bayes_df)
+print(naive_bayes_model)
+```
+
+
+```{r}
+
+# ANN alternative
+library("neuralnet")
+ann_data <- data.frame(train_df)
+ann_test_data <- data.frame(test_df)
+ann_test_categorical <- ann_test_data[, 12]
+for (i in 2:11) {
+  ann_data[, i] <- normalize(ann_data[, i])
+  ann_test_data[, i] <- normalize(ann_test_data[, i])
+}
+set.seed(8)
+mod_ann <-
+  neuralnet(
+    atRisk ~ temp + bpSys + vo2 + throat + headA + bodyA + cough + runny + nausea +
+      diarrhea,
+    ann_data,
+    hidden = 5
+  )
+pred_ann <- compute(mod_ann, ann_test_data)
+prediction_data <- pred_ann$net.result
+ind <- prediction_data < 0.5
+prediction_data[ind] = 0
+prediction_data[!ind] = 1
+ann_tab <- table(prediction_data, ann_test_data[, 12])
+accuracy(ann_tab)
+```
+
+
+Decision Tree:        Accuracy: 81.651376146789 Precision: 80.719794344473 Recall: 87.4651810584958
+Naive Bayes           Accuracy: 79.6636085626911 Precision: 79.1237113402062 Recall: 85.5153203342618
+SVM                   Accuracy: 78.8990825688073 Precision: 78.2608695652174 Recall: 85.2367688022284
+ANN                   Accuracy: 80.8868501529052 Precision: 81.4516129032258 Recall: 84.4011142061281
+KNN                   Accuracy: 80.4281345565749 Precision: 79.6915167095116 Recall: 86.3509749303621
+
+
+Decision Tree:        Accuracy: 81.651376146789 Precision: 80.719794344473 Recall: 87.4651810584958
+Naive Bayes           Accuracy: 79.6636085626911 Precision: 79.1237113402062 Recall: 85.5153203342618
+SVM                   Accuracy: 78.8990825688073 Precision: 78.2608695652174 Recall: 85.2367688022284
+ANN                   Accuracy: 81.8042813455658 Precision: 82.4324324324324 Recall: 84.958217270195"
+KNN                   Accuracy: 80.4281345565749 Precision: 79.6915167095116 Recall: 86.3509749303621
+
+
+
+
+t_nb_md <- train(subset(naive_bayes_df, select=-atRisk), naive_bayes_df$atRisk, method = "nb", trControl = trainControl(method = "cv", number = 10))
+importance <- varImp(t_nb_md)
+plot(importance)
+
+
+
+
+
+
+
+
+
+
+

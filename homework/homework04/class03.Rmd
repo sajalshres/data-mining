@@ -1,0 +1,30 @@
+---
+title: "class03"
+output: html_document
+---
+```{r}
+loan = read.table("loan.txt", header = TRUE)
+
+fold = sample(nrow(loan)) %% 3
+
+tmp = sample(10)
+
+tmp %% 3
+
+loan[fold==0,]
+```
+```{r}
+# 10 fold cross validation example
+fold = sample(nrow(x)) %% 10
+x[fold==0,]
+```
+---
+package: rpart
+
+---
+
+```{r}
+mod = rpart(disease~.,x[fold!=0,])
+
+rpart.plot(mod)
+```

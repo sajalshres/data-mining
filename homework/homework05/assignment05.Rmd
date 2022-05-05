@@ -1,0 +1,144 @@
+```{r}
+print(2.1 * 1 - 2 * 3.8 + 4)
+print(9.7 * 1 - 2 * 1.3 + 4)
+print(7.2 * 1 - 2 * 1.3 + 4)
+```
+
+
+```{r}
+x = read.table("hw05dataTrain.txt", header = TRUE)
+y = read.table("hw05dataTest.txt", header = TRUE)
+ind0 = x[, 3] == 0
+ind1 = x[, 3] == 1
+ind2 = x[, 3] == 2
+
+# train 0 and 1
+x01 = x[ind0 | ind1,]
+ind = x01[, 3] == 0
+x01[ind, 3] = 1
+x01[!ind, 3] = -1
+x01[, 3] = as.factor((x01[, 3]))
+mod01 = svm(x01[, 1:2], x01[, 3])
+
+# train 0 and 2
+x02 = x[ind0 | ind2,]
+ind = x02[, 3] == 0
+x02[ind, 3] = 1
+x02[!ind, 3] = -1
+x02[, 3] = as.factor(x02[, 3])
+mod02 = svm(x02[, 1:2], x02[, 3])
+
+# train 1 and 2
+x12 = x[ind1 | ind2,]
+ind = x12[, 3] == 1
+x12[ind, 3] = 1
+x12[!ind, 3] = -1
+x12[, 3]  = as.factor(x12[, 3])
+mod12 = svm(x12[, 1:2], x12[, 3])
+
+# predict
+pred01 =  predict(mod01, y[, 1:2])
+pred02 = predict(mod02, y[, 1:2])
+pred12 = predict(mod12, y[,1:2])
+
+res = data.frame(y[,3], pred01, pred02, pred12)
+fpred = c()
+for (i in 1:nrow(res)) {
+  r = res[i,]
+  d = c()
+  # map prediction to class 0, 1 and 2
+  if (r$pred01 == 1) {
+    d= append(d, 0)
+  } else {
+    d=append(d, 1)
+  }
+  if (r$pred02 == 1) {
+    d= append(d, 0)
+  } else {
+    d= append(d, 2)
+  }
+  if (r$pred12 == 1) {
+    d= append(d, 1)
+  } else {
+    d= append(d, 2)
+  }
+  # add to final prediction using majority rule
+  fpred = append(fpred, as.numeric(names(which.max(table(d)))))
+}
+
+cMatrix = table(fpred, y[,3])
+print(cMatrix)
+
+```
+
+```{r}
+res = data.frame(y[,3], pred01, pred02, pred12)
+fpred = c()
+for (i in 1:nrow(res)) {
+  r = res[i,]
+  d = c()
+  if (r$pred01 == 1) {
+    d= append(d, 0)
+  } else {
+    d=append(d, 1)
+  }
+  if (r$pred02 == 1) {
+    d= append(d, 0)
+  } else {
+    d= append(d, 2)
+  }
+  if (r$pred12 == 1) {
+    d= append(d, 1)
+  } else {
+    d= append(d, 2)
+  }
+  fpred = append(fpred, as.numeric(names(which.max(table(d)))))
+}
+res$pred = fpred
+table(fpred, y[,3] )
+```
+
+```{r}
+res$pred01 = as.numeric(as.character(res$pred01))
+ind = res$pred01 == 1
+res$pred01[ind] = 0
+res$pred01[!ind] = 1
+
+
+res$pred02 = as.numeric(as.character(res$pred02))
+ind = res$pred02 == 1
+res$pred02[ind] = 0
+res$pred02[!ind] = 2
+
+res$pred12 = as.numeric(as.character(res$pred12))
+ind = res$pred12 == 1
+res$pred12[ind] = 1
+res$pred12[!ind] = 2
+
+fpred = c()
+
+for (i in 1:nrow(res)) {
+  r = res[i,]
+  fpred = append(fpred, as.numeric(names(which.max(table(c(r$pred01, r$pred02, r$pred12))))))
+}
+
+table(fpred, y[,3] )
+
+```
+
+
+```{r}
+y[y$var3==0|y$var3==1, 3]
+```
+
+```{r}
+table( pred12, y[,3])
+```
+
+```{r}
+confusionMatrix(pred02, y[, 3])
+```
+
+```{r}
+plot(mod01, x[,1:2])
+```

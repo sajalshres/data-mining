@@ -1,0 +1,11 @@
+id gender ageGroup pulse test virus
+101 F 1 63 45 Y
+102 F 3 68 58 N
+103 M 2 67 72 N
+104 F 2 72 67 N
+105 M 1 58 39 Y
+106 M 3 75 61 N
+107 F 3 69 73 N
+108 M 2 78 52 Y
+109 F 3 80 66 N
+110 F 1 56 47 Y

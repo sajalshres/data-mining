@@ -1,0 +1,41 @@
+Class Notes
+
+```{r}
+x = read.table("patients1.txt", header = TRUE)
+
+minMax = function(v) {
+  mx = max(v)
+  mn  = min(v)
+  return ((v-mn)/(mx-mn))
+}
+
+for(i in 1:nrow(x)) {
+  x[,i] = minMax(x[,i])
+}
+
+dis = dist(x)
+
+clst = hclust(dis, method="single")
+
+clusters = cutree(clst, k=10)
+
+clstAvgs = function(x, grps) {
+  rtn = NULL
+  for(i in 1:max(grps)) {
+    rtn = rbind(rtn, colMeans(x[grps==i,]))
+  }
+  return(rtn)
+}
+
+clstAvgs(x[,1:6], clusters)
+
+# for complete link
+clst = hclust(dis, method="complete")
+
+
+# dbscan load package
+library(dbscan)
+db = dbscan(x,3,5)
+clstAvgs(xx[,1:6], db$cluster)
+
+```

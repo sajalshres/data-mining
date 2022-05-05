@@ -1,0 +1,27 @@
+```{r}
+ds = read.table("hw03dataSenate.txt", header=TRUE)
+```
+
+
+```{r}
+ds[,3:14]
+```
+
+```{r}
+mod = rpart(approval~pol+age+law+mil+soc+edu+med+bus+agr+fin+years, ds, method = "class")
+
+print(mod)
+
+print(rpart.plot(mod))
+```
+
+```{r}
+pred = predict(mod, ds, type="vector")
+pred
+```
+
+
+```{r}
+rpart.plot(mod)
+```
+

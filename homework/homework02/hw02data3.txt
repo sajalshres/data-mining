@@ -1,0 +1,6 @@
+milk, coffee, donuts, cereal
+coke, milk, cereal, tomatoes
+milk, bacon, eggs, bananas, apples
+coffee, milk, cereal, bread
+coke, bread, beer
+beer, milk, cereal, bananas

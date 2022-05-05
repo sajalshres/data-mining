@@ -1,0 +1,122 @@
+```{r}
+#read data into table
+x=read.table("patients1.txt",header=TRUE)
+```
+
+
+```{r}
+#change the nominal attributes to factors
+for(i in 7:14){ 
+  x[,i] = as.factor(x[,i]) 
+}
+
+```
+
+
+```{r}
+#build the model (don't forget to install package e1071
+mod = naiveBayes(disease~.,x)
+```
+
+
+```{r}
+typeof(x[,1])
+```
+```{r}
+data = c("1.1", "1.1", "11", "2.2", "22")
+
+data2 = as.factor(data)
+
+levels(data2)
+```
+```{r}
+mod
+```
+```{r}
+ds = read.table("defaults.txt", header=TRUE)
+as.factor(ds[, 3])
+```
+
+```{r}
+for(i in 1:3) {
+  print(i)
+  ds[,i] = as.factor(ds[,i])
+}
+
+dsMod = naiveBayes(default~., ds)
+
+```
+
+```{r}
+dsMod
+```
+```{r}
+virusDs = read.table("virus.txt", header = TRUE)
+
+for(i in 2:3) {
+  virusDs[,i] = as.factor(virusDs[,i])
+}
+
+virusDsMod = naiveBayes(virus~., virusDs)
+
+virusDsMod
+```
+
+```{r}
+mean(virusDs$test[virusDs$virus=="N"])
+```
+
+```{r}
+# a n
+n = 0.65 * 0.55 * 0.70 * dnorm(66, 64, 8) * dnorm(50, 71, 8)
+print(n)
+
+y = 0.35 * 0.48 * 0.25 * dnorm(66, 74, 8) * dnorm(50, 58, 10)
+print(y)
+```
+
+
+```{r}
+#b
+n = 0.65 * 0.45 * 0.15 * dnorm(90, 64, 8) * dnorm(81, 71, 8)
+print(n)
+
+y = 0.35 * 0.52 * 0.20 * dnorm(90, 74, 8) * dnorm(81, 58, 10)
+print(y)
+```
+
+```{r}
+#b
+n = 0.65 * 0.45  * 0.15  * dnorm(90, 64, 8) * dnorm(55, 71, 8)
+print(n)
+
+y = 0.35 * 0.52  * 0.45  * dnorm(90, 74, 8) * dnorm(55, 58, 10)
+print(y)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

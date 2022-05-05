@@ -1,0 +1,36 @@
+```{r}
+# read the data
+df = read.table("hw03dataSenate.txt", header = TRUE)
+
+# make pol, law, mil, soc, edu, med, bus, agr, fin and approval, factors
+colFactNames = c("pol", "law", "mil", "soc", "edu", "med", "bus", "agr", "fin", "approval")
+for (col in colnames(df)) {
+  if(!is.element(col, colFactNames)) {next}
+  df[,col] = as.factor(df[,col])
+}
+
+# build a model using approval as the class and the rest of the attributes
+model = naiveBayes(approval~., df[, 3:14])
+
+# display the model
+print(model)
+```
+
+```{r}
+colFactNames = c(1,2)
+is.element(1, colFactNames)
+```
+
+```{r}
+head(cbind(predict, df[50:100,]))
+```
+
+```{r}
+pred = predict(model, df[81:100,])
+tab = table(pred, df[81:100,]$approval)
+
+1 - sum(diag(tab)) / sum(tab)
+```
+```{r}
+```
+

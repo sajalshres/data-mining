@@ -1,0 +1,95 @@
+class problem
+```{r}
+x0 = c(1,1,0,1)
+x1 = c(0,0,1,1)
+x2 = c(1,0,0,1)
+cls = c(1,1,-1,-1)
+ds = data.frame(x0, x1, x2, cls)
+w = c(-0.1, 0.1, -0.1)
+
+learningRate = 0.1
+finalWeights = c()
+
+perceptPreds = function(ds, w, learningRate) {
+  preds = c()
+  adjustedW = data.frame(matrix(ncol=3, nrow=0))
+  colnames(adjustedW) = c("w0", "w1", "w2")
+  
+  for (i in 1:nrow(ds)) {
+    # cls - pred * x * learningRate
+    pred = sign(ds$x0[i] * w[1] + ds$x1[i] * w[2] + ds$x2[i] * w[3])
+    preds = c(preds, pred)
+    
+    adjustedW0 = ((ds$cls[i] - pred) * ds$x0[i]) * learningRate
+    adjustedW1 = ((ds$cls[i] - pred) * ds$x1[i]) * learningRate
+    adjustedW2 = ((ds$cls[i] - pred) * ds$x2[i]) * learningRate
+    adjustedW[nrow(adjustedW) + 1,] = c(adjustedW0, adjustedW1, adjustedW2)
+  }
+  
+  return(list("preds" = preds, "adjustedW" = adjustedW))
+}
+
+calcWeightedW = function(adjustedW, w) {
+  res = c()
+  for(i in 1:3) {
+    res = c(res, sum(c(adjustedW[,i], w[i])))
+  }
+  return(res)
+}
+
+result = perceptPreds(ds, w, learningRate)
+
+preds = result$preds
+adjustedW = result$adjustedW
+weightedW = calcWeightedW(adjustedW, w)
+adjustedW[nrow(adjustedW) + 1, ] = weightedW
+print(adjustedW)
+```
+
+
+Part 2
+```{r}
+x0 = c(1,1,1,1)
+x1 = c(0,1,1,0)
+x2 = c(1,0,1,0)
+cls = c(-1,-1,1,-1)
+ds = data.frame(x0, x1, x2, cls)
+learningRate = 0.1
+w = c(0.1, 0.1, 0.1)
+
+result = perceptPreds(ds, w, learningRate)
+
+preds = result$preds
+adjustedW = result$adjustedW
+weightedW = calcWeightedW(adjustedW, w)
+adjustedW[nrow(adjustedW) + 1, ] = weightedW
+print(adjustedW)
+```
+
+
+Part 3
+```{r}
+trainDs = read.table("hw06dataTrain.txt", header = TRUE)
+testDs = read.table("hw06dataTest.txt", header = TRUE)
+
+# build the model
+set.seed(1)
+mod = neuralnet(class~var1+var2+var3+var4, trainDs, hidden=3)
+
+# plot the model
+plot(mod)
+```
+```{r}
+# predict result using test data set
+pred = compute(mod, testDs)
+
+# create confusion matrix
+table(sign(pred$net.result), testDs[,5])
+```
+
+
+
+
+
+
+
